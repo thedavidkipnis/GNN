@@ -45,29 +45,22 @@ def gen_employees(num_employees):
 # generates the teams based on previously created employee objects
 def gen_teams(num_teams, employees):
 
-    teams = []
+    pass
 
-    for i in range(num_teams):
-        temp = Team(i, employees)
-        teams.append(temp)
 
-    return teams
+def gen_nodes(num_nodes):
+
+    pass
 
 
 def run():
 
     employees = gen_employees(26)
     teams = gen_teams(2, employees)
+    gen_nodes(100)
 
 
     DAG = [] # collection of nodes/tasks
-
-    for node_counter in range(100):
-        temp = Node(node_counter, 0, 0, [], 0, 0)
-        DAG.append(temp)
-
-    for node in DAG:
-        print(node.ID)
 
 
 if __name__ == "__main__":
