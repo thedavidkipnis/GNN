@@ -1,4 +1,5 @@
 import random
+import networkx as nx
 
 
 class Node:
@@ -55,13 +56,22 @@ def gen_nodes(num_nodes):
 
 def run():
 
-    employees = gen_employees(26)
-    teams = gen_teams(2, employees)
-    gen_nodes(100)
+    # nodes need to be added as tuples: (node_id, {attribute dict.})
 
+    n1 = (1, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
+    n2 = (2, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 2, 'nc_prob': 0.0})
+    n3 = (3, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 3, 'nc_prob': 0.0})
+    n4 = (4, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 4, 'nc_prob': 0.0})
+    n5 = (5, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 5, 'nc_prob': 0.0})
 
-    DAG = [] # collection of nodes/tasks
+    sample_nodes = [n1, n2, n3, n4, n5]
+    sample_edges = [(1,2),(1,3),(2,4),(3,4),(2,5)]
 
+    DAG = nx.DiGraph()
+    DAG.add_nodes_from(sample_nodes)
+    DAG.add_edges_from(sample_edges)
+
+    print(DAG._node[1]['local_delta'])
 
 if __name__ == "__main__":
     run()
