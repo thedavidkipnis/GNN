@@ -55,9 +55,7 @@ def gen_nodes(num_nodes):
 
 
 def run():
-
-    # nodes need to be added as tuples: (node_id, {attribute dict.})
-
+    
     n1 = (1, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
     n2 = (2, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 2, 'nc_prob': 0.0})
     n3 = (3, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 3, 'nc_prob': 0.0})
