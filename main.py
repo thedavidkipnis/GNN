@@ -46,7 +46,7 @@ def gen_employees(num_employees):
 
         exp = random.randint(0,25)
 
-        # TODO: convert the below to (-sin(1.1x - pi/2) + 1) / 4
+        # TODO: convert the below to (-sin(1.1x - pi/2.2) + 1) / 4
         attnd_prob = random.random()
 
         temp = Employee(i, False, None, exp, attnd_prob) # TODO: change 3rd and 4th parameters with rand probs based on functions Jonah created
