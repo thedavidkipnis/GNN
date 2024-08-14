@@ -1,7 +1,10 @@
 import random
 import networkx as nx
+import rng_funcs as rng
 
+# to install stuff: py -m pip install scipy
 
+# keeping class structure present for future if custome func. is needed
 class Node:
     
     def __init__(self, ID, local_delta, pred_completion_delta, children, team, nc_prob):
@@ -56,11 +59,11 @@ def gen_nodes(num_nodes):
 
 def run():
     
-    n1 = (1, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
-    n2 = (2, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 2, 'nc_prob': 0.0})
-    n3 = (3, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 3, 'nc_prob': 0.0})
-    n4 = (4, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 4, 'nc_prob': 0.0})
-    n5 = (5, {'local_delta': 0, 'pred_completion_delta': 0, 'team': 5, 'nc_prob': 0.0})
+    n1 = (1, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
+    n2 = (2, {'local_delta': 3, 'pred_completion_delta': 0, 'team': 2, 'nc_prob': 0.0})
+    n3 = (3, {'local_delta': 55, 'pred_completion_delta': 0, 'team': 3, 'nc_prob': 0.0})
+    n4 = (4, {'local_delta': 2, 'pred_completion_delta': 0, 'team': 4, 'nc_prob': 0.0})
+    n5 = (5, {'local_delta': 13, 'pred_completion_delta': 0, 'team': 5, 'nc_prob': 0.0})
 
     sample_nodes = [n1, n2, n3, n4, n5]
     sample_edges = [(1,2),(1,3),(2,4),(3,4),(2,5)]
@@ -68,9 +71,7 @@ def run():
     DAG = nx.DiGraph()
     DAG.add_nodes_from(sample_nodes)
     DAG.add_edges_from(sample_edges)
-
-    print(DAG._node[1]['local_delta'])
-
+    
 if __name__ == "__main__":
     run()
 
