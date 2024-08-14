@@ -23,9 +23,17 @@ Output: Adjusted delta of how long that task took given input
 '''
 def rng_task_time(experience_coefficient: float, task_delta: float, prob_of_error):
 
+    added_delta = 0.0
+
+    # random error happened
+    if random.random() <= prob_of_error:
+        added_delta = random.random() * task_delta
+
     rand_cff = round(random.random(), 4)
 
-    return experience_coefficient * sc.norm.ppf(q=rand_cff, loc=task_delta, scale=task_delta/8)
+    total_delta = (experience_coefficient * sc.norm.ppf(q=rand_cff, loc=task_delta, scale=task_delta/8)) + added_delta
+
+    return total_delta
 
 
 '''
