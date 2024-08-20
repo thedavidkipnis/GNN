@@ -1,8 +1,13 @@
-import random
 import networkx as nx
 import rng_funcs as rng
 
 # to install stuff: py -m pip install scipy
+
+# List representing the attandance probability of given employee 
+# Each index represents a day of the week
+# 5 indexes - 0 is Monday, 1 is Tuesday, etc.
+emp_attendance_probability = [0.65, 0.73, 0.86, 0.89, .8]
+
 
 # keeping class structure present for future if custome func. is needed
 class Node:
@@ -19,19 +24,20 @@ class Node:
 
 class Employee:
 
-    def __init__(self, ID, is_busy, team, exp_years, attendance_probability):
+    def __init__(self, ID, is_busy, team, exp_years, resource_type):
         self.ID = ID
         self.is_busy = is_busy
         self.team = team
         self.exp_years = exp_years
-        self.attendance_probability = attendance_probability
+        self.resource_type = resource_type
 
 
 class Team:
 
-    def __init__(self, ID, employees):
-        self.id = ID
+    def __init__(self, ID, employees, shop_type):
+        self.ID = ID
         self.employees = employees
+        self.shop_type = shop_type
         # self.shift_start = shift_start
         # self.shift_end = shift_end
 
@@ -44,12 +50,12 @@ def gen_employees(num_employees):
 
     for i in range(num_employees):
 
-        exp = random.randint(0,25)
+        exp = round(rng.emp_exp_years_skewed_dist_gen(), 2)
 
-        # TODO: convert the below to (-sin(1.1x - pi/2.2) + 1) / 4
-        attnd_prob = random.random()
+        temp = Employee(i, False, None, exp, 'B')
+        if i > num_employees / 2:
+            temp.resource_type = 'A'
 
-        temp = Employee(i, False, None, exp, attnd_prob) # TODO: change 3rd and 4th parameters with rand probs based on functions Jonah created
         employees.append(temp)
 
     return employees
@@ -58,7 +64,24 @@ def gen_employees(num_employees):
 # generates the teams based on previously created employee objects
 def gen_teams(num_teams, employees):
 
-    pass
+    teams = []
+    
+    # generating individual teams
+    for i in range(num_teams):
+        temp_team = Team(i,[],1)
+        if i % 2 == 0:
+            temp_team.shop_type = 2
+
+        teams.append(temp_team)
+
+    # assigning employees to teams
+    team_counter = 0
+    for emp in employees:
+        emp.team = team_counter
+        teams[team_counter].employees.append(emp)
+        team_counter = (team_counter + 1) % num_teams
+
+    return teams
 
 
 def gen_nodes(num_nodes):
@@ -79,11 +102,23 @@ def run():
 
     # DAG = nx.DiGraph()
     # DAG.add_nodes_from(sample_nodes)
-    # DAG.add_edges_from(sample_edges)
+    # DAG.add_edges_from(sample_edges)    
 
-    employees = gen_employees(10)
-    for e in employees:
-        print(e.ID)
+    # Generating all employees
+    employees = gen_employees(50)
+    
+    # Generating teams and dividing employees into teams
+    teams = gen_teams(10,employees)
+
+
+    for t in teams:
+        print(t.ID)
+        for emp in t.employees:
+            print(emp.ID, emp.resource_type, emp.team, '')
+        print('=====')
+
+    
+
     
 if __name__ == "__main__":
     run()
