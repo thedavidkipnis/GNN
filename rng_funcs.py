@@ -9,15 +9,15 @@ Input: N/A
 Output: Years of experience randomly assigned to an employee during employee generation
 '''
 def emp_exp_years_skewed_dist_gen():
-    a = 6
-    loc = 0
-    scale = 1
-    raw_sample = skewnorm.rvs(a, loc, scale)
-    min_val, max_val = 0, 25
+
+    # creating a skew-normal random variable
+    raw_sample = skewnorm.rvs(6, 0, 1) # rvs(alpha, loc, scale)
     target_min, target_max = 2, 10
     current_min, current_max = -0.4, 2.4  # Approximated from original percentiles
     scaled_sample = (raw_sample - current_min) / (current_max - current_min) * (target_max - target_min) + target_min
-    final_sample = np.clip(scaled_sample, min_val, max_val)
+
+    # clips all values in scaled_sample to be within the range provided
+    final_sample = np.clip(scaled_sample, 0, 25)
     return final_sample
 
 
