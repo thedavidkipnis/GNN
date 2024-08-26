@@ -1,5 +1,7 @@
 import networkx as nx
 import rng_funcs as rng
+import random
+import matplotlib.pyplot as plt
 
 # to install stuff: py -m pip install scipy
 
@@ -89,6 +91,88 @@ def gen_nodes(num_nodes):
     pass
 
 
+def gen_DAG(num_top_layers):
+
+    # Step 1: create static set of topological layers
+    # Step 2: populate topological layers based on function of relationship between num nodes (y) and layer (x)
+    # Step 3: connect nodes with random probability between layers
+
+    # ALT PLAN
+    # Step 1: start at first node
+    # Step 2: using num nodes to top. layer relationship func, determine how many nodes to generate for next "layer"
+    # Step 3: generate next layer's nodes
+    # Step 3: generate edges between current layer's nodes and next layer's nodes
+
+    DAG = nx.DiGraph()
+
+    cur_layer = []
+    next_layer = []
+
+    # adding starting node to first layer and graph
+    starter_node = (0, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
+    cur_layer.append(starter_node)
+
+    DAG.add_node(0)
+    DAG._node[0] = starter_node[1]
+
+    layer_counter = 1
+    node_id_counter = 1
+
+    for i in range(num_top_layers-1):
+        # emptying next layer
+        next_layer.clear()
+
+        # computing number of nodes to generate for following layer based on relationship function
+        num_nodes_to_generate = rng.node_count_generation_by_top_layer(layer_counter)
+        layer_counter += 1
+
+        # generating nodes and creating next topological layer
+        for node in range(num_nodes_to_generate):
+            temp_node = (node_id_counter, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
+            node_id_counter += 1
+            next_layer.append(temp_node)
+
+
+        DAG.add_nodes_from(next_layer)
+
+        # creating edges between nodes
+        if len(cur_layer) == 1: # case: cur_layer size is 1
+            for node in next_layer:
+                DAG.add_edge(cur_layer[0][0], node[0])
+
+        elif len(cur_layer) > len(next_layer): #case: cur_layer size is larger than next_layer
+            chance_of_connectivity = len(next_layer) / len(cur_layer)
+            connection_found = False
+            for node in cur_layer:
+                for next_node in next_layer:
+                    if (random.random() < chance_of_connectivity):
+                        connection_found = True
+                        DAG.add_edge(node[0], next_node[0])
+
+            # need to add edge case check for when NONE of the cur_layer nodes connect to a next_layer of size 1
+            # if no chance connection was made
+            if not connection_found:
+                connection_idx_to_add = random.randint(0, len(cur_layer)-1)
+                DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
+
+        else: # case: cur_layer size smaller than or equal to next_layer size
+            chance_of_connectivity = 0.5
+            for next_node in next_layer:
+                connection_found = False
+                for node in cur_layer:
+                    if(random.random() > chance_of_connectivity):
+                        DAG.add_edge(node[0], next_node[0])
+                        connection_found = True
+                if not connection_found:
+                    connection_idx_to_add = random.randint(0, len(cur_layer)-1)
+                    DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
+
+        # assigning next layer to be current layer for next iteration
+        cur_layer = next_layer.copy()
+    
+    return DAG
+
+
 def run():
     
     # n1 = (1, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
@@ -111,12 +195,23 @@ def run():
     teams = gen_teams(10,employees)
 
 
-    for t in teams:
-        print(t.ID)
-        for emp in t.employees:
-            print(emp.ID, emp.resource_type, emp.team, '')
-        print('=====')
+    DAG = gen_DAG(7)
+    #print(DAG.nodes())
+    #print(DAG.edges())
 
+    for layer, nodes in enumerate(nx.topological_generations(DAG)):
+    # multipartite_layout expects the layer as a node attribute, so add the
+    # numeric layer value as a node attribute
+        for node in nodes:
+            DAG.nodes[node]["layer"] = layer
+
+    pos = nx.multipartite_layout(DAG, subset_key="layer")
+
+    fig, ax = plt.subplots(figsize=(10,5))
+    nx.draw_networkx(DAG, pos=pos, ax=ax, node_size=1000, node_color = 'white' , edge_color = 'white', font_color = 'black' )
+    ax.set_facecolor('#1AA7EC')
+    fig.tight_layout()
+    plt.show()
     
 
     

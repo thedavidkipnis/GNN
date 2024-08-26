@@ -56,6 +56,26 @@ def rng_task_time(experience_coefficient: float, task_delta: float, prob_of_erro
 
 
 '''
+Input: which topological layer the DAG generator is currently attempting to generate nodes for
+Output: the number of nodes needed for that topological layer
+'''
+def node_count_generation_by_top_layer(topological_layer) -> int:
+
+    A = 0.05
+    B = 0.3
+    C = 0.3
+    D = 1.3
+    E = 0.6
+    F = 14.1
+    G = 0
+    k = 0.5
+    w = 0.2
+
+    return math.ceil(((A * D ** ( (-k * ((topological_layer-F)/C)) * math.sin(w * ((topological_layer-F)/C)) ** 2 )) * E) / B) + G
+
+
+
+'''
 Input: number of trials being run, probability of error
 '''
 def error_count_for_iterations_and_experience(num_trials: int, prob_of_error: float):
