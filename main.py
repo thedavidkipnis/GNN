@@ -173,6 +173,20 @@ def gen_DAG(num_top_layers):
     return DAG
 
 
+def display_DAG(DAG):
+    for layer, nodes in enumerate(nx.topological_generations(DAG)):
+        for node in nodes:
+            DAG.nodes[node]["layer"] = layer
+
+    pos = nx.multipartite_layout(DAG, subset_key="layer")
+
+    fig, ax = plt.subplots(figsize=(10,5))
+    nx.draw_networkx(DAG, pos=pos, ax=ax, node_size=1000, node_color = 'white' , edge_color = 'white', font_color = 'black' )
+    ax.set_facecolor('#1AA7EC')
+    fig.tight_layout()
+    plt.show()
+
+
 def run():
     
     # n1 = (1, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
@@ -198,22 +212,8 @@ def run():
     DAG = gen_DAG(7)
     #print(DAG.nodes())
     #print(DAG.edges())
-
-    for layer, nodes in enumerate(nx.topological_generations(DAG)):
-    # multipartite_layout expects the layer as a node attribute, so add the
-    # numeric layer value as a node attribute
-        for node in nodes:
-            DAG.nodes[node]["layer"] = layer
-
-    pos = nx.multipartite_layout(DAG, subset_key="layer")
-
-    fig, ax = plt.subplots(figsize=(10,5))
-    nx.draw_networkx(DAG, pos=pos, ax=ax, node_size=1000, node_color = 'white' , edge_color = 'white', font_color = 'black' )
-    ax.set_facecolor('#1AA7EC')
-    fig.tight_layout()
-    plt.show()
     
-
+    display_DAG(DAG)
     
 if __name__ == "__main__":
     run()
