@@ -86,18 +86,8 @@ def gen_teams(num_teams, employees):
     return teams
 
 
-def gen_nodes(num_nodes):
+def gen_DAG(num_top_layers: int):
 
-    pass
-
-
-def gen_DAG(num_top_layers):
-
-    # Step 1: create static set of topological layers
-    # Step 2: populate topological layers based on function of relationship between num nodes (y) and layer (x)
-    # Step 3: connect nodes with random probability between layers
-
-    # ALT PLAN
     # Step 1: start at first node
     # Step 2: using num nodes to top. layer relationship func, determine how many nodes to generate for next "layer"
     # Step 3: generate next layer's nodes
@@ -119,11 +109,12 @@ def gen_DAG(num_top_layers):
     node_id_counter = 1
 
     for i in range(num_top_layers-1):
+
         # emptying next layer
         next_layer.clear()
 
         # computing number of nodes to generate for following layer based on relationship function
-        num_nodes_to_generate = rng.node_count_generation_by_top_layer(layer_counter)
+        num_nodes_to_generate = rng.node_count_generation_by_top_layer_alt(layer_counter)
         layer_counter += 1
 
         # generating nodes and creating next topological layer
@@ -142,6 +133,10 @@ def gen_DAG(num_top_layers):
 
         elif len(cur_layer) > len(next_layer): #case: cur_layer size is larger than next_layer
             chance_of_connectivity = len(next_layer) / len(cur_layer)
+
+            if len(next_layer) <= 4: # situational case for making enough connections in cases where size difference between layers is too great
+                chance_of_connectivity = 0.5
+
             connection_found = False
             for node in cur_layer:
                 for next_node in next_layer:
@@ -172,6 +167,19 @@ def gen_DAG(num_top_layers):
     
     return DAG
 
+'''
+Method for generating edges between layers that are not right next to each other
+'''
+def post_process_edge_generation(DAG):
+
+    layers = {}
+
+    for layer, nodes in enumerate(nx.topological_generations(DAG)):
+        layers[layer] = []
+        for node in nodes:
+            DAG.nodes[node]["layer"] = layer
+            layers[layer].append(node)
+
 
 def display_DAG(DAG):
     for layer, nodes in enumerate(nx.topological_generations(DAG)):
@@ -180,8 +188,8 @@ def display_DAG(DAG):
 
     pos = nx.multipartite_layout(DAG, subset_key="layer")
 
-    fig, ax = plt.subplots(figsize=(10,5))
-    nx.draw_networkx(DAG, pos=pos, ax=ax, node_size=1000, node_color = 'white' , edge_color = 'white', font_color = 'black' )
+    fig, ax = plt.subplots(figsize=(30,60))
+    nx.draw_networkx(DAG, pos=pos, ax=ax, node_size=10, node_color = 'white' , edge_color = 'white', font_color = 'black', with_labels=False)
     ax.set_facecolor('#1AA7EC')
     fig.tight_layout()
     plt.show()
@@ -209,11 +217,12 @@ def run():
     teams = gen_teams(10,employees)
 
 
-    DAG = gen_DAG(7)
+    DAG = gen_DAG(100)
     #print(DAG.nodes())
     #print(DAG.edges())
-    
-    display_DAG(DAG)
+    print(len(DAG))
+    #display_DAG(DAG)
+
     
 if __name__ == "__main__":
     run()

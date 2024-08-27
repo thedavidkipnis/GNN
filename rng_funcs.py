@@ -74,6 +74,23 @@ def node_count_generation_by_top_layer(topological_layer) -> int:
     return math.ceil(((A * D ** ( (-k * ((topological_layer-F)/C)) * math.sin(w * ((topological_layer-F)/C)) ** 2 )) * E) / B) + G
 
 
+'''
+Input: which topological layer the DAG generator is currently attempting to generate nodes for
+Output: the number of nodes needed for that topological layer
+'''
+def node_count_generation_by_top_layer_alt(topological_layer):
+
+    P = 0.4
+    R = 0.72
+    W = -0.04
+    Z = 1.8
+    i = 207.3
+    U = 1.1
+    t = 3.5
+    q = 3
+
+    return math.ceil(P + R * (Z ** (W * (topological_layer - i) * abs(U * math.sin(((topological_layer/t) - i) / q)))))
+
 
 '''
 Input: number of trials being run, probability of error
