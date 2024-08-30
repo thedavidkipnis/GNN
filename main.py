@@ -10,6 +10,16 @@ import matplotlib.pyplot as plt
 # 5 indexes - 0 is Monday, 1 is Tuesday, etc.
 emp_attendance_probability = [0.65, 0.73, 0.86, 0.89, .8]
 
+'''
+During task (node) generation, a time will be pulled at random from this list and assigned to a task
+'''
+task_baseline_time = []
+for i in range(1,29):
+    task_baseline_time.append(i*15)
+
+
+TEAM_COUNT = 20
+EMPLOYEE_COUNT = 200
 
 # keeping class structure present for future if custome func. is needed
 class Node:
@@ -86,7 +96,7 @@ def gen_teams(num_teams, employees):
     return teams
 
 
-def gen_DAG(num_top_layers: int):
+def gen_DAG(num_top_layers: int, teams):
 
     # Step 1: start at first node
     # Step 2: using num nodes to top. layer relationship func, determine how many nodes to generate for next "layer"
@@ -99,7 +109,7 @@ def gen_DAG(num_top_layers: int):
     next_layer = []
 
     # adding starting node to first layer and graph
-    starter_node = (0, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
+    starter_node = (0, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 0, 'emp_ID': 0, 'nc_prob': 0.0})
     cur_layer.append(starter_node)
 
     DAG.add_node(0)
@@ -107,6 +117,9 @@ def gen_DAG(num_top_layers: int):
 
     layer_counter = 1
     node_id_counter = 1
+
+    team_idx_counter = 1 # TODO: refactor so that team IDs get assigned, not just counters
+
 
     for i in range(num_top_layers-1):
 
@@ -119,9 +132,26 @@ def gen_DAG(num_top_layers: int):
 
         # generating nodes and creating next topological layer
         for node in range(num_nodes_to_generate):
-            temp_node = (node_id_counter, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 1, 'nc_prob': 0.0})
+
+            '''
+            For each node:
+                local_delta: total time to complete task
+                global_delta: time delta from start of project until end of current task
+                team: which team can execute this task
+                nc_porc: non-conformance probability | chance of error
+            '''
+            # generate task base time, assign employee, adjust according to experience
+            local_delta = random.choice(task_baseline_time)
+
+            employee = random.choice(teams[team_idx_counter].employees).ID
+
+            # exp_coefficient, nc_prob = rng.adjusted_task_time_and_prob_of_error(teams[team_idx_counter].employees[])
+
+            temp_node = (node_id_counter, {'local_delta': local_delta, 'global_delta': 0, 'team': team_idx_counter, 'emp_ID': employee, 'nc_prob': 0.0})
             node_id_counter += 1
             next_layer.append(temp_node)
+
+            team_idx_counter = (team_idx_counter + 1) % TEAM_COUNT
 
 
         DAG.add_nodes_from(next_layer)
@@ -211,17 +241,33 @@ def run():
     # DAG.add_edges_from(sample_edges)    
 
     # Generating all employees
-    employees = gen_employees(50)
+    EMPLOYEES = gen_employees(EMPLOYEE_COUNT)
     
     # Generating teams and dividing employees into teams
-    teams = gen_teams(10,employees)
+    TEAMS = gen_teams(TEAM_COUNT,EMPLOYEES)
+
+    # print(len(EMPLOYEES))
+    # for i in EMPLOYEES:
+    #     print(i.ID)
 
 
-    DAG = gen_DAG(100)
-    #print(DAG.nodes())
-    #print(DAG.edges())
-    print(len(DAG))
-    #display_DAG(DAG)
+    DAG = gen_DAG(100, TEAMS)
+    # #print(DAG.nodes())
+    # #print(DAG.edges())
+    # print('Graph size:',len(DAG))
+    # #display_DAG(DAG)
+
+    for i in range(100):
+        team = DAG._node[i]['team']
+        emp_id = DAG._node[i]['emp_ID']
+        print(team, ';', emp_id)
+
+        st = ''
+        for t in TEAMS[team].employees:
+            st += str(t.ID) + ' '
+        print(st)
+
+        print(i, DAG._node[i])
 
     
 if __name__ == "__main__":
