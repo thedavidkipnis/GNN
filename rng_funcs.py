@@ -92,6 +92,15 @@ def node_count_generation_by_top_layer_alt(topological_layer):
     return math.ceil(P + R * (Z ** (W * (topological_layer - i) * abs(U * math.sin(((topological_layer/t) - i) / q)))))
 
 
+def node_count_generation_by_top_layer_small(topological_layer):
+
+    return math.ceil(3 * math.sin(topological_layer-1) + 3.5) 
+
+
+def adjust_local_delta_based_on_nc(local_delta: float):
+    return local_delta + float(np.random.normal(120, 15, 1)[0])
+
+
 '''
 Input: number of trials being run, probability of error
 '''

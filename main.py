@@ -19,8 +19,8 @@ for i in range(1,29):
     task_baseline_time.append(i*15)
 
 
-TEAM_COUNT = 20
-EMPLOYEE_COUNT = 200
+TEAM_COUNT = 4 # used to be 20
+EMPLOYEE_COUNT = 10 # used to be 200
 
 # keeping class structure present for future if custome func. is needed
 class Node:
@@ -111,7 +111,13 @@ def gen_DAG(num_top_layers: int, teams, employees):
 
     # adding starting node to first layer and graph
     exp_coefficient, starting_nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[0].exp_years)
-    starter_node = (0, {'baseline_delta': 15, 'local_delta': 0, 'pred_completion_delta': 0, 'team': 0, 'emp_ID': 0, 'exp_coefficient': exp_coefficient, 'nc_prob': round(starting_nc_prob, 5)})
+    local_delta = round(exp_coefficient * 15, 5)
+
+    starting_nc_occured = False
+    if random.random() < starting_nc_prob:
+        starting_nc_occured = True
+
+    starter_node = (0, {'baseline_delta': 15, 'local_delta': local_delta, 'global_delta': local_delta, 'team': 0, 'emp_ID': 0, 'exp_coefficient': exp_coefficient, 'nc_prob': round(starting_nc_prob, 5), 'nc_occured': starting_nc_occured})
     cur_layer.append(starter_node)
 
     DAG.add_node(0)
@@ -131,7 +137,7 @@ def gen_DAG(num_top_layers: int, teams, employees):
         next_layer.clear()
 
         # computing number of nodes to generate for following layer based on relationship function
-        num_nodes_to_generate = rng.node_count_generation_by_top_layer_alt(layer_counter)
+        num_nodes_to_generate = rng.node_count_generation_by_top_layer_small(layer_counter)
         layer_counter += 1
 
         # generating nodes and creating next topological layer
@@ -156,13 +162,20 @@ def gen_DAG(num_top_layers: int, teams, employees):
             exp_coefficient, nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[employee].exp_years)
             local_delta = round(exp_coefficient * baseline_delta, 5)
 
+            nc_occured = False
+            if random.random() < nc_prob:
+                nc_occured = True
+                print(">>>>>>>>>>> og delta:", local_delta)
+                local_delta = rng.adjust_local_delta_based_on_nc(local_delta)
+
             temp_node = (node_id_counter, {'baseline_delta': baseline_delta,
                                            'local_delta': local_delta,
                                             'global_delta': 0, 
                                             'team': team_idx_counter, 
                                             'emp_ID': employee, 
                                             'exp_coefficient' : round(exp_coefficient, 5), 
-                                            'nc_prob': round(nc_prob, 5)})
+                                            'nc_prob': round(nc_prob, 5), 
+                                            'nc_occured': nc_occured})
             node_id_counter += 1
             next_layer.append(temp_node)
 
@@ -230,6 +243,31 @@ def post_process_edge_generation(DAG):
             layers[layer].append(node)
 
 
+'''
+Main point for simulation - filling out the global deltas based on predecessor attributes per node
+'''
+def simulation_global_delta_process_DAG(DAG):
+
+    for node in DAG:
+        print("Looking at node " + str(node))
+
+        # populate global delta
+        max_pred_global_delta = 0
+        for i in DAG.predecessors(node):
+            if DAG._node[i]["global_delta"] > max_pred_global_delta:
+                max_pred_global_delta = DAG._node[i]["global_delta"]
+
+        DAG._node[node]["global_delta"] = max_pred_global_delta + DAG._node[node]["local_delta"]
+
+        print('Attributes:', DAG._node[node])
+
+        print('Successors:', DAG[node])
+
+        
+
+        print("=======")
+
+
 def display_DAG(DAG):
     for layer, nodes in enumerate(nx.topological_generations(DAG)):
         for node in nodes:
@@ -237,7 +275,7 @@ def display_DAG(DAG):
 
     pos = nx.multipartite_layout(DAG, subset_key="layer")
 
-    fig, ax = plt.subplots(figsize=(30,60))
+    fig, ax = plt.subplots(figsize=(10,10))
     nx.draw_networkx(DAG, pos=pos, ax=ax, node_size=10, node_color = 'white' , edge_color = 'white', font_color = 'black', with_labels=False)
     ax.set_facecolor('#1AA7EC')
     fig.tight_layout()
@@ -269,27 +307,14 @@ def run():
     # for i in EMPLOYEES:
     #     print(i.ID)
 
-    DAG = gen_DAG(100, TEAMS, EMPLOYEES)
+    DAG = gen_DAG(5, TEAMS, EMPLOYEES)
+    simulation_global_delta_process_DAG(DAG)
+    
+    # for node in DAG:
+    #     print(DAG._node[node])
 
-    c = 0
-    for n in DAG.nodes():
-        if c < 100:
-            print(DAG._node[n])
-        c+= 1
-    print('Graph size:',len(DAG))
-    #display_DAG(DAG)
 
-    # for i in range(100):
-    #     team = DAG._node[i]['team']
-    #     emp_id = DAG._node[i]['emp_ID']
-    #     print(team, ';', emp_id)
-
-    #     st = ''
-    #     for t in TEAMS[team].employees:
-    #         st += str(t.ID) + ' '
-    #     print(st)
-
-    #     print(i, DAG._node[i])
+    display_DAG(DAG)
 
     
 if __name__ == "__main__":
