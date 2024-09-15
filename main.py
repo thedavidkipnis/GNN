@@ -2,6 +2,7 @@ import networkx as nx
 import rng_funcs as rng
 import random
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # to install stuff: py -m pip install scipy
 
@@ -58,7 +59,7 @@ def gen_employees(num_employees):
 
     # experience years 0-25yrs, skewed towards 
 
-    employees = []
+    employees = {}
 
     for i in range(num_employees):
 
@@ -68,7 +69,7 @@ def gen_employees(num_employees):
         if i > num_employees / 2:
             temp.resource_type = 'A'
 
-        employees.append(temp)
+        employees[i] = temp
 
     return employees
 
@@ -76,27 +77,27 @@ def gen_employees(num_employees):
 # generates the teams based on previously created employee objects
 def gen_teams(num_teams, employees):
 
-    teams = []
+    teams = {}
     
     # generating individual teams
     for i in range(num_teams):
-        temp_team = Team(i,[],1)
+        temp_team = Team(i,set(),1)
         if i % 2 == 0:
             temp_team.shop_type = 2
 
-        teams.append(temp_team)
+        teams[i] = temp_team
 
     # assigning employees to teams
     team_counter = 0
     for emp in employees:
-        emp.team = team_counter
-        teams[team_counter].employees.append(emp)
+        employees[emp].team = team_counter
+        teams[team_counter].employees.add(emp)
         team_counter = (team_counter + 1) % num_teams
 
     return teams
 
 
-def gen_DAG(num_top_layers: int, teams):
+def gen_DAG(num_top_layers: int, teams, employees):
 
     # Step 1: start at first node
     # Step 2: using num nodes to top. layer relationship func, determine how many nodes to generate for next "layer"
@@ -109,7 +110,8 @@ def gen_DAG(num_top_layers: int, teams):
     next_layer = []
 
     # adding starting node to first layer and graph
-    starter_node = (0, {'local_delta': 1, 'pred_completion_delta': 0, 'team': 0, 'emp_ID': 0, 'nc_prob': 0.0})
+    exp_coefficient, starting_nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[0].exp_years)
+    starter_node = (0, {'baseline_delta': 15, 'local_delta': 0, 'pred_completion_delta': 0, 'team': 0, 'emp_ID': 0, 'exp_coefficient': exp_coefficient, 'nc_prob': round(starting_nc_prob, 5)})
     cur_layer.append(starter_node)
 
     DAG.add_node(0)
@@ -120,6 +122,8 @@ def gen_DAG(num_top_layers: int, teams):
 
     team_idx_counter = 1 # TODO: refactor so that team IDs get assigned, not just counters
 
+    # task_times_dict = {}
+    # task_times_dict[0] = 15
 
     for i in range(num_top_layers-1):
 
@@ -135,21 +139,33 @@ def gen_DAG(num_top_layers: int, teams):
 
             '''
             For each node:
+                baseline_delta: the pre-simulation, predicted time for the task's completion (stays static during each simulation)
                 local_delta: total time to complete task
                 global_delta: time delta from start of project until end of current task
                 team: which team can execute this task
                 nc_porc: non-conformance probability | chance of error
             '''
             # generate task base time, assign employee, adjust according to experience
-            local_delta = random.choice(task_baseline_time)
+            baseline_delta = random.choice(task_baseline_time)
 
-            employee = random.choice(teams[team_idx_counter].employees).ID
+            # task_times_dict[node_id_counter] = baseline_delta
 
-            # exp_coefficient, nc_prob = rng.adjusted_task_time_and_prob_of_error(teams[team_idx_counter].employees[])
 
-            temp_node = (node_id_counter, {'local_delta': local_delta, 'global_delta': 0, 'team': team_idx_counter, 'emp_ID': employee, 'nc_prob': 0.0})
+            employee = random.sample(teams[team_idx_counter].employees, 1)[0]
+
+            exp_coefficient, nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[employee].exp_years)
+            local_delta = round(exp_coefficient * baseline_delta, 5)
+
+            temp_node = (node_id_counter, {'baseline_delta': baseline_delta,
+                                           'local_delta': local_delta,
+                                            'global_delta': 0, 
+                                            'team': team_idx_counter, 
+                                            'emp_ID': employee, 
+                                            'exp_coefficient' : round(exp_coefficient, 5), 
+                                            'nc_prob': round(nc_prob, 5)})
             node_id_counter += 1
             next_layer.append(temp_node)
+
 
             team_idx_counter = (team_idx_counter + 1) % TEAM_COUNT
 
@@ -194,7 +210,10 @@ def gen_DAG(num_top_layers: int, teams):
 
         # assigning next layer to be current layer for next iteration
         cur_layer = next_layer.copy()
-    
+
+        # df = pd.DataFrame(task_times_dict, index=[0])
+        # df.to_csv('task_baseline_deltas.csv')
+
     return DAG
 
 '''
@@ -250,24 +269,27 @@ def run():
     # for i in EMPLOYEES:
     #     print(i.ID)
 
+    DAG = gen_DAG(100, TEAMS, EMPLOYEES)
 
-    DAG = gen_DAG(100, TEAMS)
-    # #print(DAG.nodes())
-    # #print(DAG.edges())
-    # print('Graph size:',len(DAG))
-    # #display_DAG(DAG)
+    c = 0
+    for n in DAG.nodes():
+        if c < 100:
+            print(DAG._node[n])
+        c+= 1
+    print('Graph size:',len(DAG))
+    #display_DAG(DAG)
 
-    for i in range(100):
-        team = DAG._node[i]['team']
-        emp_id = DAG._node[i]['emp_ID']
-        print(team, ';', emp_id)
+    # for i in range(100):
+    #     team = DAG._node[i]['team']
+    #     emp_id = DAG._node[i]['emp_ID']
+    #     print(team, ';', emp_id)
 
-        st = ''
-        for t in TEAMS[team].employees:
-            st += str(t.ID) + ' '
-        print(st)
+    #     st = ''
+    #     for t in TEAMS[team].employees:
+    #         st += str(t.ID) + ' '
+    #     print(st)
 
-        print(i, DAG._node[i])
+    #     print(i, DAG._node[i])
 
     
 if __name__ == "__main__":

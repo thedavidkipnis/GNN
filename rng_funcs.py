@@ -27,7 +27,7 @@ Output: tuple containing (experience coefficient, prob. of error)
 '''
 def adjusted_task_time_and_prob_of_error(exp_years: int):
 
-    experience_coefficient = (math.exp(-1*(exp_years - 3))) + 0.3
+    experience_coefficient = (math.exp(-1*(exp_years - 5))) + 0.3
     prob_of_error = math.log(experience_coefficient + 0.7) / 6.0
 
     return (experience_coefficient,prob_of_error)

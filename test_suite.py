@@ -1,4 +1,5 @@
 import rng_funcs as rng
+import pandas as pd
 
 
 for i in range(7):
