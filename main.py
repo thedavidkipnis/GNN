@@ -10,10 +10,6 @@ import pandas as pd
 # Each index represents a day of the week
 # 5 indexes - 0 is Monday, 1 is Tuesday, etc.
 
-
-# this is me showing Jonah that branching is siqqq
-
-
 emp_attendance_probability = [0.65, 0.73, 0.86, 0.89, .8]
 
 '''
@@ -170,7 +166,6 @@ def gen_DAG(num_top_layers: int, teams, employees):
             nc_occured = False
             if random.random() < nc_prob:
                 nc_occured = True
-                print(">>>>>>>>>>> og delta:", local_delta)
                 local_delta = rng.adjust_local_delta_based_on_nc(local_delta)
 
             temp_node = (node_id_counter, {'baseline_delta': baseline_delta,
@@ -253,24 +248,32 @@ Main point for simulation - filling out the global deltas based on predecessor a
 '''
 def simulation_global_delta_process_DAG(DAG):
 
-    for node in DAG:
-        print("Looking at node " + str(node))
+    node_bucket = set()
 
-        # populate global delta
-        max_pred_global_delta = 0
-        for i in DAG.predecessors(node):
-            if DAG._node[i]["global_delta"] > max_pred_global_delta:
-                max_pred_global_delta = DAG._node[i]["global_delta"]
+    # inserting first node's ID into bucket
+    node_bucket.add(0)
 
-        DAG._node[node]["global_delta"] = max_pred_global_delta + DAG._node[node]["local_delta"]
+    while len(node_bucket) > 0:
 
-        print('Attributes:', DAG._node[node])
+        # list of successors to be added for next iteration of processing (neighbors)
+        to_be_added = set()
 
-        print('Successors:', DAG[node])
+        # looking at every current node; this is where resource contention reolution will be happening
+        for node in node_bucket:
+            print(node, DAG[node])
 
-        
+            for successor in DAG[node]:
+                to_be_added.add(successor)
 
-        print("=======")
+        print(to_be_added)
+
+        node_bucket.clear()
+        for i in to_be_added:
+            node_bucket.add(i)
+
+        print(node_bucket)
+        print('======')
+
 
 
 def display_DAG(DAG):
@@ -315,8 +318,8 @@ def run():
     DAG = gen_DAG(5, TEAMS, EMPLOYEES)
     simulation_global_delta_process_DAG(DAG)
     
-    # for node in DAG:
-    #     print(DAG._node[node])
+    for node in DAG:
+        print(DAG._node[node])
 
 
     display_DAG(DAG)
