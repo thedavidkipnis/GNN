@@ -9,6 +9,11 @@ import pandas as pd
 # List representing the attandance probability of given employee 
 # Each index represents a day of the week
 # 5 indexes - 0 is Monday, 1 is Tuesday, etc.
+
+
+# this is me showing Jonah that branching is siqqq
+
+
 emp_attendance_probability = [0.65, 0.73, 0.86, 0.89, .8]
 
 '''
