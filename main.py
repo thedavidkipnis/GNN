@@ -91,7 +91,10 @@ def gen_teams(num_teams, employees):
     return teams
 
 
-def run():
+'''
+gen_node_deltas: True|False, if marked True, will generate nodes from scratch, otherwise read from 'task_deltas' file
+'''
+def run(gen_node_deltas):
     
     # Generating all employees
     EMPLOYEES = gen_employees(EMPLOYEE_COUNT)
@@ -99,20 +102,17 @@ def run():
     # Generating teams and dividing employees into teams
     TEAMS = gen_teams(TEAM_COUNT,EMPLOYEES)
 
-    # print(len(EMPLOYEES))
-    # for i in EMPLOYEES:
-    #     print(i.ID)
-
-    DAG = dgn.gen_DAG(5, TEAMS, EMPLOYEES, task_baseline_times)
+    # Generating DAG
+    DAG = dgn.gen_DAG(5, TEAMS, EMPLOYEES, task_baseline_times, gen_node_deltas)
+    
     dgn.simulation_global_delta_process_DAG(DAG)
     
     for node in DAG:
-        print(DAG._node[node])
-
+        print(node, DAG._node[node])
 
     dgn.display_DAG(DAG)
 
     
 if __name__ == "__main__":
-    run()
+    run(True)
 

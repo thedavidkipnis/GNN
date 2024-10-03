@@ -8,7 +8,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
-def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time):
+def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, gen_node_deltas):
 
     # Step 1: start at first node
     # Step 2: using num nodes to top. layer relationship func, determine how many nodes to generate for next "layer"
@@ -22,37 +22,23 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time):
     cur_layer = []
     next_layer = []
 
-    # adding starting node to first layer and graph
-    exp_coefficient, starting_nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[0].exp_years)
-    local_delta = round(exp_coefficient * 15, 5)
+    layer_counter = 0
+    node_id_counter = 0
 
-    starting_nc_occured = False
-    if random.random() < starting_nc_prob:
-        starting_nc_occured = True
-
-    starter_node = (0, {'baseline_delta': 15, 'local_delta': local_delta, 'global_delta': local_delta, 'team': 0, 'emp_ID': 0, 'exp_coefficient': exp_coefficient, 'nc_prob': round(starting_nc_prob, 5), 'nc_occured': starting_nc_occured})
-    cur_layer.append(starter_node)
-
-    DAG.add_node(0)
-    DAG._node[0] = starter_node[1]
-
-    layer_counter = 1
-    node_id_counter = 1
-
-    team_idx_counter = 1 # TODO: refactor so that team IDs get assigned, not just counters
+    team_idx_counter = 0 # TODO: refactor so that team IDs get assigned, not just counters
 #endregion
 
-    for i in range(num_top_layers-1):
+    for i in range(num_top_layers):
 
         # emptying next layer
         next_layer.clear()
 
         # computing number of nodes to generate for following layer based on relationship function
-        num_nodes_to_generate = rng.node_count_generation_by_top_layer_small(layer_counter)
+        num_nodes_to_generate_for_cur_layer = rng.node_count_generation_by_top_layer_small(layer_counter)
         layer_counter += 1
 
         # generating nodes and creating next topological layer
-        for node in range(num_nodes_to_generate):
+        for node in range(num_nodes_to_generate_for_cur_layer):
 
             '''
             For each node:
@@ -83,13 +69,17 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time):
                                             'exp_coefficient' : round(exp_coefficient, 5), 
                                             'nc_prob': round(nc_prob, 5), 
                                             'nc_occured': nc_occured})
+            
             node_id_counter += 1
             next_layer.append(temp_node)
-
             team_idx_counter = (team_idx_counter + 1) % len(teams)
 
 
         DAG.add_nodes_from(next_layer)
+
+        if len(cur_layer) == 0: # edge case for the first node (cur_layer doesn't exist yet)
+            cur_layer = next_layer.copy()
+            continue
 
         # creating edges between nodes
         if len(cur_layer) == 1: # case: cur_layer size is 1
