@@ -6,9 +6,10 @@ import random
 import rng_funcs as rng
 import networkx as nx
 import matplotlib.pyplot as plt
+import numpy as np
 
 
-def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, gen_node_deltas):
+def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_task_baseline_deltas):
 
     # Step 1: start at first node
     # Step 2: using num nodes to top. layer relationship func, determine how many nodes to generate for next "layer"
@@ -24,6 +25,8 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, gen_node_
 
     layer_counter = 0
     node_id_counter = 0
+
+    task_delta_dict = {}
 
     team_idx_counter = 0 # TODO: refactor so that team IDs get assigned, not just counters
 #endregion
@@ -70,6 +73,9 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, gen_node_
                                             'nc_prob': round(nc_prob, 5), 
                                             'nc_occured': nc_occured})
             
+            if update_task_baseline_deltas:
+                task_delta_dict[node_id_counter] = baseline_delta
+
             node_id_counter += 1
             next_layer.append(temp_node)
             team_idx_counter = (team_idx_counter + 1) % len(teams)
@@ -120,7 +126,20 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, gen_node_
         # assigning next layer to be current layer for next iteration
         cur_layer = next_layer.copy()
 
+    if update_task_baseline_deltas:
+        np.save('task_baseline_deltas.npy', task_delta_dict)
+
     return DAG
+
+
+def gen_DAG_from_file(filename):
+    try:
+        d = np.load(filename, allow_pickle='TRUE').item()
+        # TODO: implement
+    except:
+        print(f'Failed to open {filename}')
+        return
+
 
 
 '''
@@ -153,6 +172,14 @@ def simulation_global_delta_process_DAG(DAG):
 
         print(node_bucket)
         print('======')
+
+
+'''
+Prints DAG to console
+'''
+def print_DAG(DAG):
+    for node in DAG:
+        print(node, DAG._node[node])
 
 
 '''

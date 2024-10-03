@@ -1,8 +1,6 @@
-import networkx as nx
 import rng_funcs as rng
-import random
-import pandas as pd
 import dirgnn as dgn
+import numpy as np
 
 # to install stuff: py -m pip install scipy
 
@@ -93,8 +91,9 @@ def gen_teams(num_teams, employees):
 
 '''
 gen_node_deltas: True|False, if marked True, will generate nodes from scratch, otherwise read from 'task_deltas' file
+update_task_baseline_deltas: True|False, if marked true will update the task_baseline_deltas.npy file with new values
 '''
-def run(gen_node_deltas):
+def run(gen_node_deltas, update_task_baseline_deltas):
     
     # Generating all employees
     EMPLOYEES = gen_employees(EMPLOYEE_COUNT)
@@ -103,16 +102,21 @@ def run(gen_node_deltas):
     TEAMS = gen_teams(TEAM_COUNT,EMPLOYEES)
 
     # Generating DAG
-    DAG = dgn.gen_DAG(5, TEAMS, EMPLOYEES, task_baseline_times, gen_node_deltas)
+    if gen_node_deltas:
+        DAG = dgn.gen_DAG(5, TEAMS, EMPLOYEES, task_baseline_times, update_task_baseline_deltas)
+    else:
+        DAG = dgn.gen_DAG_from_file('task_baseline_deltas.npy')
     
     dgn.simulation_global_delta_process_DAG(DAG)
     
-    for node in DAG:
-        print(node, DAG._node[node])
-
+    d = np.load('task_baseline_deltas.npy', allow_pickle='TRUE').item()
+    print(d)
+    dgn.print_DAG(DAG)
     dgn.display_DAG(DAG)
+
+
 
     
 if __name__ == "__main__":
-    run(True)
+    run(gen_node_deltas=True, update_task_baseline_deltas=True)
 
