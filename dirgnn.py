@@ -23,7 +23,9 @@ def gen_layer_nodes(teams, employees, task_baseline_time, num_nodes_to_generate_
                 local_delta: total time to complete task
                 global_delta: time delta from start of project until end of current task
                 team: which team can execute this task
-                nc_porc: non-conformance probability | chance of error
+                exp_coefficient: how much the deltas will be getting multiplied by
+                nc_prob: non-conformance probability | chance of error
+                nc_occured: whether or not a non-conformance occured during runthrough
             '''
             # generate task base time, assign employee, adjust according to experience
             baseline_delta = random.choice(task_baseline_time)
@@ -172,13 +174,51 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_ta
     return DAG
 
 
-def gen_DAG_from_file(filename):
+def gen_DAG_from_file(nodes_file, edges_file, teams, employees):
     try:
-        d = np.load(filename, allow_pickle='TRUE').item()
-        # TODO: implement
+        nodes = np.load('task_baseline_deltas.npy', allow_pickle='TRUE').item()
+        edges = np.load('task_edges.npy', allow_pickle='TRUE')
+
     except:
-        print(f'Failed to open {filename}')
-        return
+        print(f'Failed to open {nodes_file} and {edges_file}')
+        return None
+
+    DAG = nx.DiGraph()
+
+    team_idx_counter = 0
+    node_list = []
+
+    # adding nodes
+#region
+    for node in nodes:
+        employee = random.sample(sorted(teams[team_idx_counter].employees), 1)[0]
+        exp_coefficient, nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[employee].exp_years)
+        local_delta = round(exp_coefficient * node, 5) # baseline delta = node[1]
+
+        nc_occured = False
+        if random.random() < nc_prob:
+            nc_occured = True
+            local_delta = rng.adjust_local_delta_based_on_nc(local_delta)
+
+        temp_node = (node, {'baseline_delta': nodes[node],
+                                           'local_delta': local_delta,
+                                            'global_delta': 0, 
+                                            'team': team_idx_counter, 
+                                            'emp_ID': employee, 
+                                            'exp_coefficient' : round(exp_coefficient, 5), 
+                                            'nc_prob': round(nc_prob, 5), 
+                                            'nc_occured': nc_occured})
+        node_list.append(temp_node)
+        team_idx_counter = (team_idx_counter + 1) % len(teams)
+
+    DAG.add_nodes_from(node_list)
+#endregion
+
+    # adding edges
+    for edge in edges:
+        DAG.add_edge(edge[0], edge[1])
+
+    return DAG
 
 
 '''

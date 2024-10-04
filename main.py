@@ -105,20 +105,20 @@ def run(gen_node_deltas, update_task_baseline_deltas):
     if gen_node_deltas:
         DAG = dgn.gen_DAG(5, TEAMS, EMPLOYEES, task_baseline_times, update_task_baseline_deltas)
     else:
-        DAG = dgn.gen_DAG_from_file('task_baseline_deltas.npy')
+        DAG = dgn.gen_DAG_from_file('task_baseline_deltas.npy', 'task_edges.npy', TEAMS, EMPLOYEES)
     
     dgn.simulation_global_delta_process_DAG(DAG)
     
-    d = np.load('task_baseline_deltas.npy', allow_pickle='TRUE').item()
-    print(d)
+    # d = np.load('task_baseline_deltas.npy', allow_pickle='TRUE').item()
+    # print(d)
 
-    e = np.load('task_edges.npy', allow_pickle='TRUE')
-    print(e)
+    # e = np.load('task_edges.npy', allow_pickle='TRUE')
+    # print(e)
 
     dgn.print_DAG(DAG)
     dgn.display_DAG(DAG)
 
 
 if __name__ == "__main__":
-    run(gen_node_deltas=True, update_task_baseline_deltas=True)
+    run(gen_node_deltas=False, update_task_baseline_deltas=False)
 
