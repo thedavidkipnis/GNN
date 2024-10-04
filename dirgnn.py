@@ -58,41 +58,51 @@ def gen_layer_nodes(teams, employees, task_baseline_time, num_nodes_to_generate_
 gen_DAG helper function for generating and adding edges between layers in the DAG during creation
 '''
 def gen_layer_edges(DAG, cur_layer, next_layer):
+    
+    edges_to_save = []
 
     # creating edges between nodes
-        if len(cur_layer) == 1: # case: cur_layer size is 1
-            for node in next_layer:
-                DAG.add_edge(cur_layer[0][0], node[0])
+    if len(cur_layer) == 1: # case: cur_layer size is 1
+        for node in next_layer:
+            DAG.add_edge(cur_layer[0][0], node[0])
+            edges_to_save.append((cur_layer[0][0], node[0]))
 
-        elif len(cur_layer) > len(next_layer): #case: cur_layer size is larger than next_layer
-            chance_of_connectivity = len(next_layer) / len(cur_layer)
+    elif len(cur_layer) > len(next_layer): #case: cur_layer size is larger than next_layer
+        chance_of_connectivity = len(next_layer) / len(cur_layer)
 
-            if len(next_layer) <= 4: # situational case for making enough connections in cases where size difference between layers is too great
-                chance_of_connectivity = 0.5
+        if len(next_layer) <= 4: # situational case for making enough connections in cases where size difference between layers is too great
+            chance_of_connectivity = 0.5
 
+        connection_found = False
+        for node in cur_layer:
+            for next_node in next_layer:
+                if (random.random() < chance_of_connectivity):
+                    connection_found = True
+                    DAG.add_edge(node[0], next_node[0])
+                    edges_to_save.append((node[0], next_node[0]))
+
+        # if no chance connection was made
+        if not connection_found:
+            connection_idx_to_add = random.randint(0, len(cur_layer)-1)
+            DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
+            edges_to_save.append((cur_layer[connection_idx_to_add][0], next_node[0]))
+
+    else: # case: cur_layer size smaller than or equal to next_layer size
+        chance_of_connectivity = 0.5
+        for next_node in next_layer:
             connection_found = False
             for node in cur_layer:
-                for next_node in next_layer:
-                    if (random.random() < chance_of_connectivity):
-                        connection_found = True
-                        DAG.add_edge(node[0], next_node[0])
+                if(random.random() > chance_of_connectivity):
+                    DAG.add_edge(node[0], next_node[0])
+                    edges_to_save.append((node[0], next_node[0]))
+                    connection_found = True
 
-            # if no chance connection was made
             if not connection_found:
                 connection_idx_to_add = random.randint(0, len(cur_layer)-1)
                 DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
+                edges_to_save.append((cur_layer[connection_idx_to_add][0], next_node[0]))
 
-        else: # case: cur_layer size smaller than or equal to next_layer size
-            chance_of_connectivity = 0.5
-            for next_node in next_layer:
-                connection_found = False
-                for node in cur_layer:
-                    if(random.random() > chance_of_connectivity):
-                        DAG.add_edge(node[0], next_node[0])
-                        connection_found = True
-                if not connection_found:
-                    connection_idx_to_add = random.randint(0, len(cur_layer)-1)
-                    DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
+    return edges_to_save
 
 
 '''
@@ -115,7 +125,8 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_ta
     layer_counter = 0
     node_id_counter = 0
 
-    task_delta_dict = {}
+    task_deltas = {}
+    task_edges = []
 
     team_idx_counter = 0 # TODO: refactor so that team IDs get assigned, not just counters
 #endregion
@@ -137,7 +148,7 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_ta
 
         if update_task_baseline_deltas:
                 for node in next_layer:
-                    task_delta_dict[node[0]] = node[1]['baseline_delta']
+                    task_deltas[node[0]] = node[1]['baseline_delta']
 
         DAG.add_nodes_from(next_layer)
 
@@ -146,13 +157,17 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_ta
             continue
         
         # generating edges between current and next layer
-        gen_layer_edges(DAG, cur_layer=cur_layer, next_layer=next_layer)
+        layer_task_edges = gen_layer_edges(DAG, cur_layer=cur_layer, next_layer=next_layer)
+
+        if update_task_baseline_deltas:
+            task_edges += layer_task_edges
 
         # assigning next layer to be current layer for next iteration
         cur_layer = next_layer.copy()
 
     if update_task_baseline_deltas:
-        np.save('task_baseline_deltas.npy', task_delta_dict)
+        np.save('task_baseline_deltas.npy', task_deltas)
+        np.save('task_edges.npy', task_edges)
 
     return DAG
 
