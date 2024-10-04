@@ -1,6 +1,6 @@
 import rng_funcs as rng
 import dirgnn as dgn
-import numpy as np
+import networkx as nx
 
 # to install stuff: py -m pip install scipy
 
@@ -115,10 +115,14 @@ def run(gen_node_deltas, update_task_baseline_deltas):
     # e = np.load('task_edges.npy', allow_pickle='TRUE')
     # print(e)
 
+    
+
+    return DAG
+
+if __name__ == "__main__":
+    DAG = run(gen_node_deltas=True, update_task_baseline_deltas=True)
+    
     dgn.print_DAG(DAG)
     dgn.display_DAG(DAG)
 
-
-if __name__ == "__main__":
-    run(gen_node_deltas=False, update_task_baseline_deltas=False)
 
