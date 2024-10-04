@@ -9,6 +9,54 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+'''
+gen_DAG helper function for generating and adding nodes to the current layer, then adding them to the DAG
+'''
+def gen_layer_nodes():
+    pass
+
+
+'''
+gen_DAG helper function for generating and adding edges between layers in the DAG during creation
+'''
+def gen_layer_edges(DAG, cur_layer, next_layer):
+
+    # creating edges between nodes
+        if len(cur_layer) == 1: # case: cur_layer size is 1
+            for node in next_layer:
+                DAG.add_edge(cur_layer[0][0], node[0])
+
+        elif len(cur_layer) > len(next_layer): #case: cur_layer size is larger than next_layer
+            chance_of_connectivity = len(next_layer) / len(cur_layer)
+
+            if len(next_layer) <= 4: # situational case for making enough connections in cases where size difference between layers is too great
+                chance_of_connectivity = 0.5
+
+            connection_found = False
+            for node in cur_layer:
+                for next_node in next_layer:
+                    if (random.random() < chance_of_connectivity):
+                        connection_found = True
+                        DAG.add_edge(node[0], next_node[0])
+
+            # if no chance connection was made
+            if not connection_found:
+                connection_idx_to_add = random.randint(0, len(cur_layer)-1)
+                DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
+
+        else: # case: cur_layer size smaller than or equal to next_layer size
+            chance_of_connectivity = 0.5
+            for next_node in next_layer:
+                connection_found = False
+                for node in cur_layer:
+                    if(random.random() > chance_of_connectivity):
+                        DAG.add_edge(node[0], next_node[0])
+                        connection_found = True
+                if not connection_found:
+                    connection_idx_to_add = random.randint(0, len(cur_layer)-1)
+                    DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
+
+
 def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_task_baseline_deltas):
 
     # Step 1: start at first node
@@ -86,42 +134,9 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_ta
         if len(cur_layer) == 0: # edge case for the first node (cur_layer doesn't exist yet)
             cur_layer = next_layer.copy()
             continue
-
-        # creating edges between nodes
-        if len(cur_layer) == 1: # case: cur_layer size is 1
-            for node in next_layer:
-                DAG.add_edge(cur_layer[0][0], node[0])
-
-        elif len(cur_layer) > len(next_layer): #case: cur_layer size is larger than next_layer
-            chance_of_connectivity = len(next_layer) / len(cur_layer)
-
-            if len(next_layer) <= 4: # situational case for making enough connections in cases where size difference between layers is too great
-                chance_of_connectivity = 0.5
-
-            connection_found = False
-            for node in cur_layer:
-                for next_node in next_layer:
-                    if (random.random() < chance_of_connectivity):
-                        connection_found = True
-                        DAG.add_edge(node[0], next_node[0])
-
-            # need to add edge case check for when NONE of the cur_layer nodes connect to a next_layer of size 1
-            # if no chance connection was made
-            if not connection_found:
-                connection_idx_to_add = random.randint(0, len(cur_layer)-1)
-                DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
-
-        else: # case: cur_layer size smaller than or equal to next_layer size
-            chance_of_connectivity = 0.5
-            for next_node in next_layer:
-                connection_found = False
-                for node in cur_layer:
-                    if(random.random() > chance_of_connectivity):
-                        DAG.add_edge(node[0], next_node[0])
-                        connection_found = True
-                if not connection_found:
-                    connection_idx_to_add = random.randint(0, len(cur_layer)-1)
-                    DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
+        
+        # generating edges between current and next layer
+        gen_layer_edges(DAG, cur_layer=cur_layer, next_layer=next_layer)
 
         # assigning next layer to be current layer for next iteration
         cur_layer = next_layer.copy()
@@ -139,7 +154,6 @@ def gen_DAG_from_file(filename):
     except:
         print(f'Failed to open {filename}')
         return
-
 
 
 '''

@@ -109,8 +109,8 @@ def run(gen_node_deltas, update_task_baseline_deltas):
     
     dgn.simulation_global_delta_process_DAG(DAG)
     
-    d = np.load('task_baseline_deltas.npy', allow_pickle='TRUE').item()
-    print(d)
+    # d = np.load('task_baseline_deltas.npy', allow_pickle='TRUE').item()
+    # print(d)
     dgn.print_DAG(DAG)
     dgn.display_DAG(DAG)
 
