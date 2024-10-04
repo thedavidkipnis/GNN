@@ -12,8 +12,46 @@ import numpy as np
 '''
 gen_DAG helper function for generating and adding nodes to the current layer, then adding them to the DAG
 '''
-def gen_layer_nodes():
-    pass
+def gen_layer_nodes(teams, employees, task_baseline_time, num_nodes_to_generate_for_cur_layer, node_id_counter, team_idx_counter):
+    next_layer = []
+
+    for node in range(num_nodes_to_generate_for_cur_layer):
+
+            '''
+            For each node:
+                baseline_delta: the pre-simulation, predicted time for the task's completion (stays static during each simulation)
+                local_delta: total time to complete task
+                global_delta: time delta from start of project until end of current task
+                team: which team can execute this task
+                nc_porc: non-conformance probability | chance of error
+            '''
+            # generate task base time, assign employee, adjust according to experience
+            baseline_delta = random.choice(task_baseline_time)
+
+            employee = random.sample(sorted(teams[team_idx_counter].employees), 1)[0]
+
+            exp_coefficient, nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[employee].exp_years)
+            local_delta = round(exp_coefficient * baseline_delta, 5)
+
+            nc_occured = False
+            if random.random() < nc_prob:
+                nc_occured = True
+                local_delta = rng.adjust_local_delta_based_on_nc(local_delta)
+
+            temp_node = (node_id_counter, {'baseline_delta': baseline_delta,
+                                           'local_delta': local_delta,
+                                            'global_delta': 0, 
+                                            'team': team_idx_counter, 
+                                            'emp_ID': employee, 
+                                            'exp_coefficient' : round(exp_coefficient, 5), 
+                                            'nc_prob': round(nc_prob, 5), 
+                                            'nc_occured': nc_occured})
+
+            node_id_counter += 1
+            next_layer.append(temp_node)
+            team_idx_counter = (team_idx_counter + 1) % len(teams)
+
+    return [next_layer, node_id_counter, team_idx_counter]
 
 
 '''
@@ -57,6 +95,9 @@ def gen_layer_edges(DAG, cur_layer, next_layer):
                     DAG.add_edge(cur_layer[connection_idx_to_add][0], next_node[0])
 
 
+'''
+Function for generating DAG nodes and edges
+'''
 def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_task_baseline_deltas):
 
     # Step 1: start at first node
@@ -89,45 +130,14 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_ta
         layer_counter += 1
 
         # generating nodes and creating next topological layer
-        for node in range(num_nodes_to_generate_for_cur_layer):
+        par_list = gen_layer_nodes(teams, employees, task_baseline_time, num_nodes_to_generate_for_cur_layer, node_id_counter, team_idx_counter)
+        next_layer = par_list[0]
+        node_id_counter = par_list[1]
+        team_idx_counter = par_list[2]
 
-            '''
-            For each node:
-                baseline_delta: the pre-simulation, predicted time for the task's completion (stays static during each simulation)
-                local_delta: total time to complete task
-                global_delta: time delta from start of project until end of current task
-                team: which team can execute this task
-                nc_porc: non-conformance probability | chance of error
-            '''
-            # generate task base time, assign employee, adjust according to experience
-            baseline_delta = random.choice(task_baseline_time)
-
-            employee = random.sample(teams[team_idx_counter].employees, 1)[0]
-
-            exp_coefficient, nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[employee].exp_years)
-            local_delta = round(exp_coefficient * baseline_delta, 5)
-
-            nc_occured = False
-            if random.random() < nc_prob:
-                nc_occured = True
-                local_delta = rng.adjust_local_delta_based_on_nc(local_delta)
-
-            temp_node = (node_id_counter, {'baseline_delta': baseline_delta,
-                                           'local_delta': local_delta,
-                                            'global_delta': 0, 
-                                            'team': team_idx_counter, 
-                                            'emp_ID': employee, 
-                                            'exp_coefficient' : round(exp_coefficient, 5), 
-                                            'nc_prob': round(nc_prob, 5), 
-                                            'nc_occured': nc_occured})
-            
-            if update_task_baseline_deltas:
-                task_delta_dict[node_id_counter] = baseline_delta
-
-            node_id_counter += 1
-            next_layer.append(temp_node)
-            team_idx_counter = (team_idx_counter + 1) % len(teams)
-
+        if update_task_baseline_deltas:
+                for node in next_layer:
+                    task_delta_dict[node[0]] = node[1]['baseline_delta']
 
         DAG.add_nodes_from(next_layer)
 
