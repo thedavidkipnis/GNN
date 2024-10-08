@@ -25,4 +25,3 @@ class TestDataPermanence(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    # testing merge no ff
