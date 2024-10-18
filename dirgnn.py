@@ -223,6 +223,8 @@ def gen_DAG_from_file(nodes_file, edges_file, teams, employees):
 
 '''
 Main point for simulation - filling out the global deltas based on predecessor attributes per node
+Input: DAG node set with empty global_delta fields
+Output: DAG node set with generated global_delta fields
 '''
 def simulation_global_delta_process_DAG(DAG):
 
