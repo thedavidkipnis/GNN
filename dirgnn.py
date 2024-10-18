@@ -193,7 +193,7 @@ def gen_DAG_from_file(nodes_file, edges_file, teams, employees):
     for node in nodes:
         employee = random.sample(sorted(teams[team_idx_counter].employees), 1)[0]
         exp_coefficient, nc_prob = rng.adjusted_task_time_and_prob_of_error(employees[employee].exp_years)
-        local_delta = round(exp_coefficient * node, 5) # baseline delta = node[1]
+        local_delta = round(exp_coefficient * nodes[node], 5) # baseline delta = node[1]
 
         nc_occured = False
         if random.random() < nc_prob:

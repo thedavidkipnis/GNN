@@ -112,7 +112,7 @@ def run(gen_node_deltas, update_task_baseline_deltas):
     return DAG
 
 if __name__ == "__main__":
-    DAG = run(gen_node_deltas=True, update_task_baseline_deltas=True)
+    DAG = run(gen_node_deltas=False, update_task_baseline_deltas=False)
     
     dgn.print_DAG(DAG)
     dgn.display_DAG(DAG)
