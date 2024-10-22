@@ -1,5 +1,6 @@
 import unittest
 import main
+import dirgnn
 
 class TestDataPermanence(unittest.TestCase):
 
@@ -24,4 +25,12 @@ class TestDataPermanence(unittest.TestCase):
             self.assertEqual(graph_1._node[node]['baseline_delta'], graph_thats_not_the_same._node[node]['baseline_delta'])
 
 if __name__ == '__main__':
-    unittest.main()
+    #unittest.main()
+
+    graph_2 = main.run(gen_node_deltas=False, update_task_baseline_deltas=False)
+    fs = dirgnn.rcpsp_solver_with_buffer(graph_2,0,0)
+    dirgnn.print_DAG(graph_2)
+    for t in fs:
+        print(t)
+    dirgnn.display_DAG(graph_2)
+

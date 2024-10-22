@@ -221,64 +221,62 @@ def gen_DAG_from_file(nodes_file, edges_file, teams, employees):
     return DAG
 
 
-'''
-Main point for simulation - filling out the global deltas based on predecessor attributes per node
-Input: DAG node set with empty global_delta fields
-Output: DAG node set with generated global_delta fields
-'''
-'''#Global Delta Simulation Pseudo Code - Jonah's Proposed method
-
-#Some details:
-# 1. the topologocal sort is custome to be able to add randomness to it
-# 2. the sorting mechanism uses a queue/bucket method to shuffle tasks within a topological layer before adding them to the 'sort_results' list
-# 3. the sort_results list will dictate the order of "execution" - the order in which the RCPSP/Global Delta assinging mechanism takes tasks to place them into the "execution schedule"
-
-# 1. Custom Topological Sort for random "queue" ordering
 def topological_sort_with_random_priority(DAG):
-    # Step 1: Initialize in-degree dictionary
-    INITIALIZE an empty dictionary --> `in_degree`, to store the 'in-degree' (number of predecessors) for each task (node)
-    FOR each task 'v' in the DAG:
-        SET in_degree[v] = 0  # Initially, assume no predecessors for the task
-        #where 'v' is the task/node we are assessing to establish the number of predecessors
 
-    # Step 2: Update in-degree for each node based on edges (dependencies)
-    FOR each edge (u, v) in the DAG (from 'u' to 'v'):
-        INCREMENT in_degree[v] by 1  # 'v' has one more prerequisite, where 'u' in the predecessor of task 'v'
+    # initializing in degrees to 0 per node
+    task_in_degrees = {}
+    queue = set()
+    for node in DAG.nodes:
+        node_count = len(list(DAG.predecessors(node)))
+        task_in_degrees[node] = node_count
 
-    # Step 3: Initialize queue with tasks that have no predecessors
-    INITIALIZE an empty list --> `queue`
-    FOR each task 'v' in the DAG:
-        IF in_degree[v] == 0:  # Task has no predecessors (zero in-degree)
-            ADD (task_duration, random_priority, v) to `queue` where:
-                - task_duration = DAG.nodes[v]['local_delta']
-                - random_priority = a random value (random.random()) to shuffle the queue later
+        if node_count < 1: # adding all initial tasks that have 0 predecessors
+            queue.add(node)
 
-    # Step 4: Initialize an empty list `sort_results` to store the sorted tasks, these tasks will be sorted such that a successor is never listed before its predecessor
-    #The order within the topological layer will be random on purpose as to simulate the stochasticity of real production execution
-    INITIALIZE an empty list --> `sort_results`
+    sort_results = []
 
-    # Step 5: Process the queue of tasks
-    WHILE `queue` is not empty:
-        SHUFFLE the `queue` to randomize the priority of tasks at the same level
-        POP the first task 'v' from `queue` (ignoring its duration and random priority)
-        ADD 'v' to the `sort_results` list  # 'v' is now scheduled for execution
+    while len(queue) > 0:
 
-        # Step 6: Update the in-degree of each successor of v
-        FOR each task 'w' that is a successor of 'v' (i.e., tasks that depend on 'v'):
-            DECREMENT in-degree[w] by 1  # u has one less prerequisite to be fulfilled
-            IF in-degree[w] == 0:  # All predecessors for task 'u' are now complete
-                ADD (task_duration, random_priority, w) to `queue` where:
-                    - task_duration = DAG.nodes[w]['local_delta']
-                    - random_priority = a new random value
+        task_to_process = random.sample(list(queue), 1)[0]
+        queue.remove(task_to_process)
 
-        SHUFFLE the `queue` again to maintain randomness in task selection
+        sort_results.append(task_to_process)
+        successors = DAG.successors(task_to_process)
 
-    # Step 7: Return the sorted task list
-    RETURN `sort_results`  # A topologically sorted list of tasks, with random priority where possible
+        for successor in successors:
+            task_in_degrees[successor] -= 1
+
+            if task_in_degrees[successor] < 1:
+                queue.add(successor)
+
+    return sort_results
+
+
+def rcpsp_solver_with_buffer(DAG, min_buffer, max_buffer):
+
+    final_schedule = []
+    resource_availability = {}
+
+    for node in DAG.nodes:
+        resource_availability[DAG.nodes[node]['emp_ID']] = 0
+
+    sorted_tasks = topological_sort_with_random_priority(DAG)
+    for task in sorted_tasks:
+        resource = DAG.nodes[task]['emp_ID']
+
+        earliest_start = 0
+        for predecessor in DAG.predecessors(task): # finding last predecessor that finished
+            if DAG.nodes[predecessor]['local_delta'] > earliest_start:
+                earliest_start = DAG.nodes[predecessor]['local_delta']
+
+        start_time = max(resource_availability[resource], earliest_start)
+
+        final_schedule.append((task, start_time))
+        resource_availability[resource] = earliest_start + DAG.nodes[task]['local_delta'] # TODO: add random buff here
+
+    return final_schedule
     
-
-
-
+'''
 def rcpsp_solver_with_buffer(DAG, min_buffer, max_buffer):
     # Step 1: Initialize an empty list `schedule` to store the final task schedule
     INITIALIZE an empty list --> `schedule` to store tuples (task, start_time)
@@ -325,169 +323,6 @@ def rcpsp_solver_with_buffer(DAG, min_buffer, max_buffer):
 '''
 
 
-def simulation_global_delta_process_DAG(DAG):
-
-#Modify topological sorting with random selection
-def topological_sort_with_random_priority(DAG: nx.DiGraph) -> List[int]:
-    in_degree = {v: 0 for v in DAG}
-    for _, v in DAG.edges():
-        in_degree[v] += 1
-
-    # Initial queue with tasks that have zero in-degree (no predecessors)
-    queue = [(DAG.nodes[v]['local_delta'], random.random(), v) for v in DAG if in_degree[v] == 0]
-
-    result = []
-    while queue:
-        random.shuffle(queue)  # Shuffle to make it random instead of time-based priority
-        _, _, v = queue.pop(0)  # Select a random task from the current layer
-        result.append(v)
-        for u in DAG.successors(v):
-            in_degree[u] -= 1
-            if in_degree[u] == 0:
-                queue.append((DAG.nodes[u]['local_delta'], random.random(), u))
-        random.shuffle(queue)  # Keep shuffling to ensure randomness
-
-    return result
-
-#Modified RCPSP Solver with random buffer
-def rcpsp_solver_with_buffer(DAG: nx.DiGraph, min_buffer: int = 15, max_buffer: int = 420) -> List[Tuple[int, int]]:
-    schedule = []
-    resource_availability = {DAG.nodes[node]['emp_ID']: 0 for node in DAG.nodes()}
-    sorted_tasks = topological_sort_with_random_priority(DAG)
-
-    for task in sorted_tasks:
-        resource = DAG.nodes[task]['emp_ID']
-        predecessors = list(DAG.predecessors(task))
-
-        # Find the earliest start time considering predecessor tasks
-        earliest_start = max([next((s for t, s in schedule if t == pred), 0) + DAG.nodes[pred]['local_delta']
-                              + random.randint(min_buffer, max_buffer) for pred in predecessors] + [0])
-
-        # Add a random delay to simulate resource unavailability or delays
-        resource_delay = random.randint(15, 1440)
-
-        # Schedule the task, considering the resource's availability
-        start_time = max(earliest_start, resource_availability[resource]) + resource_delay
-
-        # Record the schedule
-        schedule.append((task, start_time))
-
-        # Update resource availability after the task is completed
-        resource_availability[resource] = start_time + DAG.nodes[task]['local_delta']
-
-    return schedule
-
-#Recalculate task attributes (local_delta) for each iteration
-def recalculate_local_deltas(DAG, teams, employees, task_baseline_times):
-    for node in DAG.nodes:
-        employee_id = DAG.nodes[node]['emp_ID']
-        employee = employees[employee_id]
-        baseline_delta = random.choice(task_baseline_times)
-
-        # Recalculate experience coefficient and probability of error
-        exp_coefficient, nc_prob = adjusted_task_time_and_prob_of_error(employee.exp_years)
-        local_delta = round(exp_coefficient * baseline_delta, 5)
-
-        # Simulate potential non-conformance (nc_occured)
-        nc_occured = False
-        if random.random() < nc_prob:
-            nc_occured = True
-            local_delta = adjust_local_delta_based_on_nc(local_delta)
-
-        # Update node attributes
-        DAG.nodes[node]['local_delta'] = local_delta
-        DAG.nodes[node]['exp_coefficient'] = round(exp_coefficient, 5)
-        DAG.nodes[node]['nc_prob'] = round(nc_prob, 5)
-        DAG.nodes[node]['nc_occured'] = nc_occured
-
-# Simulate multiple schedules
-def simulate_schedules(DAG: nx.DiGraph, teams, employees, task_baseline_times, num_runs: int = 1000) -> pd.DataFrame:
-    all_schedules = []
-
-    for run_id in range(num_runs):
-        # Recalculate task deltas for this iteration
-        recalculate_local_deltas(DAG, teams, employees, task_baseline_times)
-
-        # Generate schedule for this run
-        schedule = rcpsp_solver_with_buffer(DAG)
-
-        for task, start_time in schedule:
-            end_time = start_time + DAG.nodes[task]['local_delta']
-            '''all_schedules.append({
-                'project_ID': run_id,
-                'task_id': task,
-                'start_time': start_time,
-                'global_delta': end_time,
-                'emp_ID': DAG.nodes[task]['emp_ID']
-            })'''
-            all_schedules.append({
-                'project_ID': run_id,
-                'task_id': task,
-                'local_delta': DAG.nodes[task]['local_delta'],
-                'start_time': start_time,
-                'global_delta': end_time,
-                'emp_ID': DAG.nodes[task]['emp_ID'],
-                'team': DAG.nodes[task]['team'],  # Add the team
-                'exp_coefficient': DAG.nodes[task]['exp_coefficient'],  # Add exp_coefficient
-                'nc_prob': DAG.nodes[task]['nc_prob'],  # Add nc_prob
-                'nc_occured': DAG.nodes[task]['nc_occured']  # Add nc_occured (True/False)
-            })
-
-    return pd.DataFrame(all_schedules)
-
-# Main function to run the simulation
-def main():
-    # Number of teams and employees
-    TEAM_COUNT = 4
-    EMPLOYEE_COUNT = 10
-
-    # Generating task baseline times
-    task_baseline_times = [i * 15 for i in range(1, 29)]
-
-    # Generate employees and teams (this comes from the provided functions)
-    EMPLOYEES = gen_employees(EMPLOYEE_COUNT)
-    TEAMS = gen_teams(TEAM_COUNT, EMPLOYEES)
-
-    # Generate the DAG with task attributes (local_delta = time, emp_ID = resource)
-    DAG = gen_DAG(num_top_layers=5, teams=TEAMS, employees=EMPLOYEES, task_baseline_time=task_baseline_times, update_task_baseline_deltas=False)
-
-    # Simulate the schedules for multiple runs
-    schedule_data = simulate_schedules(DAG, TEAMS, EMPLOYEES, task_baseline_times, num_runs=1000)
-
-    # Print and save the results
-    print(schedule_data)
-    schedule_data.to_csv('schedule_simulations.csv', index=False)
-
-if __name__ == "__main__":
-    main()
-
-    # node_bucket = set()
-
-    # # inserting first node's ID into bucket
-    # node_bucket.add(0)
-
-    # while len(node_bucket) > 0:
-
-    #     # list of successors to be added for next iteration of processing (neighbors)
-    #     to_be_added = set()
-
-    #     # looking at every current node; this is where resource contention reolution will be happening
-    #     for node in node_bucket:
-    #         print(node, DAG[node])
-
-    #         for successor in DAG[node]:
-    #             to_be_added.add(successor)
-
-    #     print(to_be_added)
-
-    #     node_bucket.clear()
-    #     for i in to_be_added:
-    #         node_bucket.add(i)
-
-    #     print(node_bucket)
-    #     print('======')
-
-
 '''
 Prints DAG to console
 '''
@@ -507,7 +342,7 @@ def display_DAG(DAG):
     pos = nx.multipartite_layout(DAG, subset_key="layer")
 
     fig, ax = plt.subplots(figsize=(10,10))
-    nx.draw_networkx(DAG, pos=pos, ax=ax, node_size=10, node_color = 'white' , edge_color = 'white', font_color = 'black', with_labels=False)
+    nx.draw_networkx(DAG, pos=pos, ax=ax, node_size=10, node_color = 'white' , edge_color = 'white', font_color = 'black', with_labels=True)
     ax.set_facecolor('#1AA7EC')
     fig.tight_layout()
     plt.show()
