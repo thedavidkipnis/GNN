@@ -173,7 +173,9 @@ def gen_DAG(num_top_layers: int, teams, employees, task_baseline_time, update_ta
 
     return DAG
 
-
+'''
+Function for generating DAG from files task_baseline_deltas and task_edges
+'''
 def gen_DAG_from_file(nodes_file, edges_file, teams, employees):
     try:
         nodes = np.load('task_baseline_deltas.npy', allow_pickle='TRUE').item()
@@ -221,9 +223,12 @@ def gen_DAG_from_file(nodes_file, edges_file, teams, employees):
     return DAG
 
 
+'''
+Sorts the tasks topologically with a random bias for task selection
+'''
 def topological_sort_with_random_priority(DAG):
 
-    # initializing in degrees to 0 per node
+    # initializing in degrees to 0 for each node
     task_in_degrees = {}
     queue = set()
     for node in DAG.nodes:
@@ -235,15 +240,13 @@ def topological_sort_with_random_priority(DAG):
 
     sort_results = []
 
+    # processing the queue - bucket style!
     while len(queue) > 0:
-
         task_to_process = random.sample(list(queue), 1)[0]
+        sort_results.append(task_to_process)
         queue.remove(task_to_process)
 
-        sort_results.append(task_to_process)
-        successors = DAG.successors(task_to_process)
-
-        for successor in successors:
+        for successor in DAG.successors(task_to_process):
             task_in_degrees[successor] -= 1
 
             if task_in_degrees[successor] < 1:
@@ -252,12 +255,15 @@ def topological_sort_with_random_priority(DAG):
     return sort_results
 
 
+'''
+Sorts the tasks topologically with a random bias for task selection
+'''
 def rcpsp_solver_with_buffer(DAG, min_buffer, max_buffer):
 
     final_schedule = []
     resource_availability = {}
 
-    for node in DAG.nodes:
+    for node in DAG.nodes: # all resources are available to start
         resource_availability[DAG.nodes[node]['emp_ID']] = 0
 
     sorted_tasks = topological_sort_with_random_priority(DAG)
@@ -266,13 +272,15 @@ def rcpsp_solver_with_buffer(DAG, min_buffer, max_buffer):
 
         earliest_start = 0
         for predecessor in DAG.predecessors(task): # finding last predecessor that finished
-            if DAG.nodes[predecessor]['local_delta'] > earliest_start:
-                earliest_start = DAG.nodes[predecessor]['local_delta']
+            if DAG.nodes[predecessor]['global_delta'] > earliest_start:
+                earliest_start = DAG.nodes[predecessor]['global_delta']
 
-        start_time = max(resource_availability[resource], earliest_start)
+        earliest_start = max(resource_availability[resource], earliest_start)
 
-        final_schedule.append((task, start_time))
-        resource_availability[resource] = earliest_start + DAG.nodes[task]['local_delta'] # TODO: add random buff here
+        DAG.nodes[task]['global_delta'] = earliest_start + DAG.nodes[task]['local_delta']
+        resource_availability[resource] = DAG.nodes[task]['global_delta'] # TODO: add random buff here
+
+        final_schedule.append((task, earliest_start))
 
     return final_schedule
     
