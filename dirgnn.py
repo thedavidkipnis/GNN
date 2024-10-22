@@ -226,6 +226,105 @@ Main point for simulation - filling out the global deltas based on predecessor a
 Input: DAG node set with empty global_delta fields
 Output: DAG node set with generated global_delta fields
 '''
+'''#Global Delta Simulation Pseudo Code - Jonah's Proposed method
+
+#Some details:
+# 1. the topologocal sort is custome to be able to add randomness to it
+# 2. the sorting mechanism uses a queue/bucket method to shuffle tasks within a topological layer before adding them to the 'sort_results' list
+# 3. the sort_results list will dictate the order of "execution" - the order in which the RCPSP/Global Delta assinging mechanism takes tasks to place them into the "execution schedule"
+
+# 1. Custom Topological Sort for random "queue" ordering
+def topological_sort_with_random_priority(DAG):
+    # Step 1: Initialize in-degree dictionary
+    INITIALIZE an empty dictionary --> `in_degree`, to store the 'in-degree' (number of predecessors) for each task (node)
+    FOR each task 'v' in the DAG:
+        SET in_degree[v] = 0  # Initially, assume no predecessors for the task
+        #where 'v' is the task/node we are assessing to establish the number of predecessors
+
+    # Step 2: Update in-degree for each node based on edges (dependencies)
+    FOR each edge (u, v) in the DAG (from 'u' to 'v'):
+        INCREMENT in_degree[v] by 1  # 'v' has one more prerequisite, where 'u' in the predecessor of task 'v'
+
+    # Step 3: Initialize queue with tasks that have no predecessors
+    INITIALIZE an empty list --> `queue`
+    FOR each task 'v' in the DAG:
+        IF in_degree[v] == 0:  # Task has no predecessors (zero in-degree)
+            ADD (task_duration, random_priority, v) to `queue` where:
+                - task_duration = DAG.nodes[v]['local_delta']
+                - random_priority = a random value (random.random()) to shuffle the queue later
+
+    # Step 4: Initialize an empty list `sort_results` to store the sorted tasks, these tasks will be sorted such that a successor is never listed before its predecessor
+    #The order within the topological layer will be random on purpose as to simulate the stochasticity of real production execution
+    INITIALIZE an empty list --> `sort_results`
+
+    # Step 5: Process the queue of tasks
+    WHILE `queue` is not empty:
+        SHUFFLE the `queue` to randomize the priority of tasks at the same level
+        POP the first task 'v' from `queue` (ignoring its duration and random priority)
+        ADD 'v' to the `sort_results` list  # 'v' is now scheduled for execution
+
+        # Step 6: Update the in-degree of each successor of v
+        FOR each task 'w' that is a successor of 'v' (i.e., tasks that depend on 'v'):
+            DECREMENT in-degree[w] by 1  # u has one less prerequisite to be fulfilled
+            IF in-degree[w] == 0:  # All predecessors for task 'u' are now complete
+                ADD (task_duration, random_priority, w) to `queue` where:
+                    - task_duration = DAG.nodes[w]['local_delta']
+                    - random_priority = a new random value
+
+        SHUFFLE the `queue` again to maintain randomness in task selection
+
+    # Step 7: Return the sorted task list
+    RETURN `sort_results`  # A topologically sorted list of tasks, with random priority where possible
+    
+
+
+
+def rcpsp_solver_with_buffer(DAG, min_buffer, max_buffer):
+    # Step 1: Initialize an empty list `schedule` to store the final task schedule
+    INITIALIZE an empty list --> `schedule` to store tuples (task, start_time)
+
+    # Step 2: Track when each resource (employee) is available
+    INITIALIZE a dictionary --> `resource_availability` where:
+        FOR each task in the DAG:
+            SET resource_availability[employee] = 0
+            # This means every employee is initially available at time 0
+
+    # Step 3: Get the topologically sorted tasks (with random priority) from `topological_sort_with_random_priority`
+    SET `sorted_tasks` = topological_sort_with_random_priority(DAG)
+
+    # Step 4: Schedule each task in the sorted order
+    FOR each 'task' in `sorted_tasks`:
+        # Get the employee (resource) assigned to this 'task'
+        SET employee = DAG.nodes[task]['emp_ID']
+
+        # Step 5: Find the earliest start time based on task dependencies (predecessors)
+        INITIALIZE `earliest_start` = 0
+        IF the 'task' has predecessors:
+            FOR each predecessor task 'pred' of this 'task':
+                FIND the `end_time` of 'pred' in `schedule`
+                CALCULATE end_time_of_pred = start_time_of_pred + duration_of_pred
+                ADD a random buffer between some 'min_buffer' (15min) and 'max_buffer' (24 hours) to simulate delays
+                SET earliest_start = maximum of (end_time_of_pred + buffer) for all predecessors
+
+        # Step 6: Determine when the employee is available to start the task
+        GET the availability time of the employee (resource_availability[employee])
+        ADD a random delay (resource_delay) to simulate resource unavailability
+
+        # The final start time is the later of the earliest_start (dependencies) and employee availability
+        SET start_time = maximum of (earliest_start, resource_availability[employee]) + resource_delay
+
+        # Step 7: Record the task's start time in the `schedule`
+        ADD (task, start_time) to the `schedule` list
+
+        # Step 8: Update the availability of the employee
+        # After an employee was assigned to their first job, the resource availiability "time" become that job's completion time (start_time + duration of task)
+        SET resource_availability[employee] = start_time + duration_of_task
+
+    # Step 9: Return the final schedule
+    RETURN `schedule`  # A list of (task, start_time) tuples for the entire project
+'''
+
+
 def simulation_global_delta_process_DAG(DAG):
 
 #Modify topological sorting with random selection
